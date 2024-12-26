@@ -1,44 +1,74 @@
 console.log("Step 2 working");
 
-
 // We create the tile layer that will be the background of our map.
-
+let basemap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+});
 
 // We then create the map object with options.
-
+let map = L.map("map", {
+    center: [37.09, -95.71],
+    zoom: 4,
+    layers: [basemap]
+});
 
 // Adding our 'basemap' tile layer to the map.
+basemap.addTo(map);
 
-
-// We create the layers for our two different sets of data, earthquakes and
-// tectonicplates.
-
+// We create the layers for our two different sets of data, earthquakes and tectonicplates.
+let earthquakes = new L.layerGroup();
+let tectonicplates = new L.layerGroup();
 
 // Defining an object that contains our map for use in the layer control.
-
+let baseMaps = {
+    "Base Map": basemap
+};
 
 // We define an object that contains all of our overlays. Any combination of
 // these overlays may be visible at the same time!
-
+let overlayMaps = {
+    "Earthquakes": earthquakes,
+    "Tectonic Plates": tectonicplates
+};
 
 // Then we add a control to the map that will allow the user to change which
 // layers are visible.
-
+L.control.layers(baseMaps, overlayMaps, {
+    collapsed: false
+}).addTo(map);
 
 // Our AJAX call retrieves our earthquake geoJSON data.
 d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson").then(function (data) {
 
-  // This function returns the style data for each of the earthquakes we plot on
-  // the map. We pass the magnitude of the earthquake into two separate functions
-  // to calculate the color and radius.
+    // This function returns the style data for each of the earthquakes we plot on
+    // the map. We pass the magnitude of the earthquake into two separate functions
+    // to calculate the color and radius.
+    function styleInfo(feature) {
+        return {
+            radius: getRadius(feature.properties.mag),
+            fillColor: getColor(feature.geometry.coordinates[2]),
+            color: "#000",
+            weight: 0.5,
+            opacity: 1,
+            fillOpacity: 0.8
+        };
+    }
 
+    // This function determines the color of the marker based on the depth of the earthquake.
+    function getColor(depth) {
+        return depth > 90 ? "#ea2c2c" :
+               depth > 70 ? "#ea822c" :
+               depth > 50 ? "#ee9c00" :
+               depth > 30 ? "#eecc00" :
+               depth > 10 ? "#d4ee00" :
+                            "#98ee00";
+    }
 
-  // This function determines the color of the marker based on the magnitude of the earthquake.
-
-
-  // This function determines the radius of the earthquake marker based on its magnitude.
-  // Earthquakes with a magnitude of 0 were being plotted with the wrong radius.
- 
+    // This function determines the radius of the earthquake marker based on its magnitude.
+    // Earthquakes with a magnitude of 0 will have a minimum radius.
+    function getRadius(magnitude) {
+        return magnitude === 0 ? 1 : magnitude * 4;
+    }
 
   // Here we add a GeoJSON layer to the map once the file is loaded.
   L.geoJson(data, {
